@@ -28,8 +28,10 @@ def _convex_hull(outline: np.ndarray) -> np.ndarray:
 def min_area_rect(outline: np.ndarray) -> tuple[np.ndarray, float]:
     hull = _convex_hull(outline)
     n = len(hull)
+    if n == 0:
+        raise ValueError("outline must have at least one point")
     best_area = np.inf
-    best_half_extents = None
+    best_half_extents: np.ndarray | None = None
     best_angle = 0.0
     for i in range(n):
         edge = hull[(i + 1) % n] - hull[i]
@@ -41,6 +43,7 @@ def min_area_rect(outline: np.ndarray) -> tuple[np.ndarray, float]:
             best_area = area
             best_half_extents = extents / 2.0
             best_angle = angle
+    assert best_half_extents is not None
     return best_half_extents, best_angle
 
 

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from typing import cast
+
 import gymnasium as gym
 import numpy as np
 import pytest
 
 import push_me  # noqa: F401  (side effect: registers the presets with gymnasium)
+from push_me.env import PushTPOEnv
 
 _EXPECTED = {
     "PushTPO-Full-Single-v0": dict(obs_mode="full", n_objects=1, shapes=["t_tetromino"], goal_margin=8.0),
@@ -34,13 +37,13 @@ def test_preset_is_registered_and_makeable(preset_id):
 
 @pytest.mark.parametrize("preset_id, expected", sorted(_EXPECTED.items()))
 def test_preset_config_matches_spec_table(preset_id, expected):
-    env = gym.make(preset_id).unwrapped
+    env = cast(PushTPOEnv, gym.make(preset_id).unwrapped)
     for key, value in expected.items():
         assert getattr(env.config, key) == value, f"{preset_id}.{key}"
 
 
 def test_trap_preset_actually_enables_traps():
-    env = gym.make("PushTPO-Lidar-Trap-v0").unwrapped
+    env = cast(PushTPOEnv, gym.make("PushTPO-Lidar-Trap-v0").unwrapped)
     assert env.config.traps is True
     assert env.config.n_traps > 0
 
@@ -57,8 +60,8 @@ def test_preset_env_runs_a_few_steps(preset_id):
 
 @pytest.mark.parametrize("preset_id", sorted(_EXPECTED))
 def test_two_makes_of_the_same_preset_have_independent_configs(preset_id):
-    env_a = gym.make(preset_id).unwrapped
-    env_b = gym.make(preset_id).unwrapped
+    env_a = cast(PushTPOEnv, gym.make(preset_id).unwrapped)
+    env_b = cast(PushTPOEnv, gym.make(preset_id).unwrapped)
     assert env_a.config is not env_b.config
     env_a.config.n_objects = 999
     assert env_b.config.n_objects != 999

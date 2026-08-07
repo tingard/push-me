@@ -240,6 +240,7 @@ def test_delta_action_scales_by_max_delta():
     )
     env = PushTPOEnv(cfg)
     env.reset(seed=15)
+    assert env._pusher_body is not None
     pos_before = np.array(env._pusher_body.position)
     env.step(np.array([1.0, 0.0]))
     assert env._target == pytest.approx(pos_before + np.array([30.0, 0.0]))
@@ -333,6 +334,7 @@ def test_pusher_can_cross_most_of_the_arena_within_a_third_of_max_steps():
     cfg = PushTPOConfig(n_objects=1, obs_mode="full", seed=0, max_steps=300)
     env = PushTPOEnv(cfg)
     env.reset(seed=0)
+    assert env._pusher_body is not None
     start = np.array(env._pusher_body.position)
     corner = np.array([cfg.arena_size, cfg.arena_size]) if start[0] < cfg.arena_size / 2 else np.zeros(2)
     action = corner / cfg.arena_size * 2 - 1
@@ -348,6 +350,7 @@ def test_pusher_can_push_an_object_a_meaningful_distance():
     env.reset(seed=0)
     body = env._object_bodies[0]
     start = np.array(body.position)
+    assert env._pusher_body is not None
     env._pusher_body.position = tuple(start - np.array([0.0, 60.0]))
     env._pusher_body.velocity = (0, 0)
     body.velocity = (0, 0)

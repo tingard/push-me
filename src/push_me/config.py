@@ -12,7 +12,7 @@ class PushTPOConfig:
     goal_margin: float = 8.0
 
     obs_mode: str = "lidar"
-    n_rays: int = 64
+    n_rays: int = 128
     lidar_range: float = 150.0
     occluder_walls: int = 0
 
@@ -29,7 +29,7 @@ class PushTPOConfig:
     kd: float = 10.0
     max_push_force: float = 500.0
 
-    max_steps: int = 300
+    max_steps: int = 1000
     success_hold_steps: int = 10
     sparse_only: bool = False
     success_bonus: float = 1.0

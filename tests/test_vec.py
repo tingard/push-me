@@ -20,12 +20,14 @@ def test_vec_env_reset_and_step_shapes():
     cfg = PushTPOConfig(n_objects=1, shapes=["square"], obs_mode="lidar", n_rays=16)
     vec_env = make_vec_env(cfg, n_envs=2)
     try:
+        single_obs_shape = vec_env.single_observation_space.shape
+        assert single_obs_shape is not None
         obs, infos = vec_env.reset(seed=0)
-        assert obs.shape == (2,) + vec_env.single_observation_space.shape
+        assert obs.shape == (2,) + single_obs_shape
 
         actions = np.stack([vec_env.single_action_space.sample() for _ in range(2)])
         obs, rewards, terminated, truncated, infos = vec_env.step(actions)
-        assert obs.shape == (2,) + vec_env.single_observation_space.shape
+        assert obs.shape == (2,) + single_obs_shape
         assert rewards.shape == (2,)
         assert terminated.shape == (2,)
         assert truncated.shape == (2,)

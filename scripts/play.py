@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import argparse
+from typing import cast
 
 import gymnasium as gym
 import pygame
 
 import push_me  # noqa: F401  (side effect: registers the presets with gymnasium)
+from push_me.env import PushTPOEnv
 from push_me.teleop import mouse_to_action
 
 _PRESET_IDS = [
@@ -18,9 +20,11 @@ _PRESET_IDS = [
 ]
 
 
-def _make_env(preset_id: str, seed: int | None):
-    env = gym.make(preset_id, render_mode="human").unwrapped
+def _make_env(preset_id: str, seed: int | None) -> PushTPOEnv:
+    env = cast(PushTPOEnv, gym.make(preset_id, render_mode="human").unwrapped)
     env.reset(seed=seed)
+    if env._renderer is not None:
+        env._renderer.paused = True
     return env
 
 
@@ -35,8 +39,9 @@ def main() -> int:
 
     print(
         f"playing {_PRESET_IDS[preset_index]}\n"
-        "mouse drives the pusher -- Space=pause R=reset L=lidar B=belief "
-        "G=ground-truth Tab=next preset Esc=quit"
+        "mouse drives the pusher -- Space=start/pause R=reset L=lidar B=belief "
+        "G=ground-truth Tab=next preset Esc=quit\n"
+        "each rollout starts paused -- reposition the mouse, then press Space"
     )
 
     while True:
@@ -51,10 +56,16 @@ def main() -> int:
             print(f"switched to {_PRESET_IDS[preset_index]}")
             continue
 
+        if renderer.paused:
+            env.render()
+            continue
+
         action = mouse_to_action(pygame.mouse.get_pos(), env.config.arena_size)
         _obs, _reward, terminated, truncated, _info = env.step(action)
         if terminated or truncated:
             env.reset(seed=args.seed)
+            if env._renderer is not None:
+                env._renderer.paused = True
 
     env.close()
     return 0

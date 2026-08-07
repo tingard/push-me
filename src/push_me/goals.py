@@ -44,9 +44,9 @@ def sample_goal_rects(
     for shape in shapes:
         for _attempt in range(max_attempts):
             pose = (
-                float(rng.uniform(0, arena_size)),
-                float(rng.uniform(0, arena_size)),
-                float(rng.uniform(0, 2 * np.pi)),
+                rng.uniform(0, arena_size),
+                rng.uniform(0, arena_size),
+                rng.uniform(0, 2 * np.pi),
             )
             candidate = make_goal_rect(shape, margin, pose)
             if not _within_arena(candidate, arena_size):

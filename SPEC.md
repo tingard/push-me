@@ -224,7 +224,7 @@ Defaults: `success_bonus = 1.0`, `dense_weight = 0.01`, and a `sparse_only` flag
 harder setting.
 
 Episode terminates on success held for `success_hold_steps = 10` consecutive steps
-(prevents credit for transient fly-throughs), or on `max_steps` (default 300).
+(prevents credit for transient fly-throughs), or on `max_steps` (default 1000).
 
 ---
 
@@ -246,7 +246,7 @@ All positions normalised to `[-1, 1]` by `arena_size`.
 
 The agent carries a ray sensor. This is the partially-observed setting.
 
-- `n_rays` rays (default 64), uniformly spaced in `[0, 2π)`, **fixed in world frame**
+- `n_rays` rays (default 128), uniformly spaced in `[0, 2π)`, **fixed in world frame**
   (not pusher-relative — avoids conflating rotation-equivariance with memory).
 - Range `lidar_range` (default 150 units). **This is the primary memory-horizon knob.**
 - Each ray cast with `space.segment_query_first`; returns first hit only, so objects
@@ -320,7 +320,7 @@ class PushTPOConfig:
 
     # observability
     obs_mode: str = "lidar"              # "lidar" | "full"
-    n_rays: int = 64
+    n_rays: int = 128
     lidar_range: float = 150.0           # Dial: memory horizon
     occluder_walls: int = 0
 
@@ -340,7 +340,7 @@ class PushTPOConfig:
     max_push_force: float = 500.0
 
     # episode
-    max_steps: int = 300
+    max_steps: int = 1000
     success_hold_steps: int = 10
     sparse_only: bool = False
     success_bonus: float = 1.0
@@ -414,11 +414,15 @@ Draw order:
 1. Arena background, walls, traps (dark hatched).
 2. **Goal rectangles** — outline only, 2px, colour-coded per rect; semi-transparent fill
    that turns green when currently satisfied.
-3. **Objects** — filled polygons, colour matched to their assigned goal rect under the
-   current best assignment. Recolouring live as the assignment flips is genuinely
-   informative; it shows the agent's implicit mode commitment.
-4. **Lidar rays** — thin lines from pusher to hit point, colour by hit class
-   (grey = miss, blue = wall, orange = object). Toggle with `L`.
+3. **Objects** — filled polygons, single neutral colour, independent of which goal rect
+   they're currently matched to. Which specific box an object lands in never mattered for
+   success (the assignment in §6 is resolved after the fact, order-agnostically); colouring
+   objects to imply an object→box binding was misleading, not informative, and unreadable
+   for an operator who can't distinguish the goal-rect palette.
+4. **Lidar hits** — a small dot at each ray's hit point, colour by hit class
+   (grey = miss, blue = wall, orange = object). Drawn as points rather than lines from the
+   pusher so the higher-resolution ray fan (128 rays by default) doesn't turn into visual
+   clutter. Toggle with `L`.
 5. **Pusher** — circle, plus a faint line to its commanded target.
 6. **Belief overlay hook** (see below). Toggle with `B`.
 7. Panel: step count, reward, per-object containment error bars, assignment table,
@@ -449,9 +453,9 @@ most useful debugging affordance in this whole environment. Build it early.
 |---|---|
 | `Space` | pause / resume |
 | `R` | reset episode |
-| `L` | toggle lidar rays |
-| `B` | toggle belief overlay |
-| `G` | toggle ground-truth object outlines (on by default; off to see what the agent sees) |
+| `L` | toggle lidar hits |
+| `B` | toggle belief overlay (off by default) |
+| `G` | toggle ground-truth object outlines (off by default, to avoid biasing teleop demonstrations with information the lidar policy can't see; on to sanity-check against ground truth) |
 | `Tab` | cycle presets |
 | `Esc` | quit |
 

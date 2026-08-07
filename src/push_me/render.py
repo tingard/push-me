@@ -23,7 +23,7 @@ _TRAP_COLOR = (150, 40, 40)
 _PUSHER_COLOR = (240, 240, 240)
 _TARGET_LINE_COLOR = (140, 140, 140)
 _BELIEF_COLOR = (255, 210, 60)
-_UNASSIGNED_OBJECT_COLOR = (190, 190, 190)
+_OBJECT_COLOR = (190, 190, 190)
 _LIDAR_COLORS = {
     HitClass.NONE: (110, 110, 110),
     HitClass.WALL: (80, 140, 240),
@@ -69,8 +69,8 @@ class Renderer:
         self.font = pygame.font.SysFont("monospace", 13)
 
         self.show_lidar = True
-        self.show_belief = True
-        self.show_ground_truth = True
+        self.show_belief = False
+        self.show_ground_truth = False
         self.paused = False
         self.preset_cycle_requested = False
         self.close_requested = False
@@ -119,11 +119,11 @@ class Renderer:
         self._draw_background()
         self._draw_walls_and_occluders()
         self._draw_traps()
-        rect_colors, assignment = self._draw_goal_rects()
+        self._draw_goal_rects()
         if self.show_ground_truth:
-            self._draw_objects(rect_colors, assignment)
+            self._draw_objects()
         if self.show_lidar:
-            self._draw_lidar_rays()
+            self._draw_lidar_hits()
         self._draw_pusher()
         if self.show_belief:
             self._draw_belief_overlay()
@@ -152,6 +152,9 @@ class Renderer:
             self.paused = not self.paused
         elif key == pygame.K_r:
             self.env.reset()
+            # pause on reset: the mouse is still wherever it was for the previous
+            # rollout, and stepping immediately would drive the pusher there
+            self.paused = True
         elif key == pygame.K_l:
             self.show_lidar = not self.show_lidar
         elif key == pygame.K_b:
@@ -189,14 +192,18 @@ class Renderer:
             pygame.draw.polygon(overlay, (*_TRAP_COLOR, 100), [tuple(p) for p in corners_px])
             self.screen.blit(overlay, (0, 0))
 
-    def _draw_goal_rects(self) -> tuple[list[tuple[int, int, int]], np.ndarray | None]:
+    def _draw_goal_rects(self) -> None:
         env = self.env
         info = env._last_info
         rect_colors = [_rect_color(i) for i in range(len(env._goal_rects))]
 
+        # the outlines below are fair game unconditionally -- goal rects are given directly
+        # in the observation (SPEC.md §7) -- but which rect currently holds a correctly
+        # placed object is not observed in either obs_mode (containment/assignment are only
+        # ever computed into `info`, never `obs`), so gate the reveal behind show_ground_truth
+        # the same as the object outlines, or it leaks an unfair success cue during teleop
         satisfied_rects = set()
-        assignment = None
-        if info is not None:
+        if self.show_ground_truth and info is not None:
             assignment = info["assignment"]
             errors = info["containment_errors"]
             for obj_i, rect_i in enumerate(assignment):
@@ -211,30 +218,29 @@ class Renderer:
             self.screen.blit(overlay, (0, 0))
             pygame.draw.polygon(self.screen, rect_colors[i], corners_px, width=2)
 
-        return rect_colors, assignment
-
-    def _draw_objects(self, rect_colors: list[tuple[int, int, int]], assignment: np.ndarray | None) -> None:
+    def _draw_objects(self) -> None:
+        # not coloured to match an assigned goal rect -- which specific box an object
+        # ends up in doesn't matter for success (assignment is resolved after the fact,
+        # order-agnostically), so implying an object->box binding via colour is noise
         env = self.env
         for i in range(env.config.n_objects):
             outline_px = [tuple(p) for p in self._to_px(env._object_outline_world(i))]
-            color = rect_colors[int(assignment[i])] if assignment is not None else _UNASSIGNED_OBJECT_COLOR
-            pygame.draw.polygon(self.screen, color, outline_px)
+            pygame.draw.polygon(self.screen, _OBJECT_COLOR, outline_px)
 
-    def _draw_lidar_rays(self) -> None:
+    def _draw_lidar_hits(self) -> None:
         env = self.env
         if env.config.obs_mode != "lidar" or env._lidar_features is None:
             return
         n_rays = env.config.n_rays
         lidar_range = env.config.lidar_range
         origin_world = np.array(env._pusher_body.position)
-        origin_px = tuple(self._to_px(origin_world))
         angles = 2 * np.pi * np.arange(n_rays) / n_rays
         for i, angle in enumerate(angles):
             dist_norm = env._lidar_features[i, 0]
             hit_class = HitClass(int(np.argmax(env._lidar_features[i, 1:])))
             hit_world = origin_world + dist_norm * lidar_range * np.array([np.cos(angle), np.sin(angle)])
             hit_px = tuple(self._to_px(hit_world))
-            pygame.draw.line(self.screen, _LIDAR_COLORS[hit_class], origin_px, hit_px, 1)
+            pygame.draw.circle(self.screen, _LIDAR_COLORS[hit_class], hit_px, 2)
 
     def _draw_pusher(self) -> None:
         env = self.env

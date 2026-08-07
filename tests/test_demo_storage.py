@@ -35,10 +35,10 @@ def test_append_episode_grows_data_arrays_and_episode_ends(tmp_path):
     writer.append_episode(seed=2, steps=_episode(15, 1))
 
     root = zarr.open_group(str(path), mode="r")
-    assert root["data"]["obs_full"].shape == (25, 5)
-    assert root["data"]["action"].shape == (25, 2)
-    assert root["meta"]["episode_ends"][:].tolist() == [10, 25]
-    assert root["meta"]["episode_seeds"][:].tolist() == [1, 2]
+    assert root.get_array("data/obs_full").shape == (25, 5)
+    assert root.get_array("data/action").shape == (25, 2)
+    assert np.asarray(root.get_array("meta/episode_ends")[:]).tolist() == [10, 25]
+    assert np.asarray(root.get_array("meta/episode_seeds")[:]).tolist() == [1, 2]
     assert writer.n_episodes == 2
     assert writer.n_steps == 25
 
@@ -103,4 +103,4 @@ def test_multiple_episodes_survive_reopening_the_store(tmp_path):
     writer2.append_episode(seed=1, steps=_episode(6, 1))
 
     root = zarr.open_group(str(path), mode="r")
-    assert root["meta"]["episode_ends"][:].tolist() == [4, 10]
+    assert np.asarray(root.get_array("meta/episode_ends")[:]).tolist() == [4, 10]

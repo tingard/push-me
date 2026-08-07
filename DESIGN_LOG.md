@@ -1022,3 +1022,165 @@ land with its corresponding test(s) passing before moving on.
   6's entry, per this log's own append-only convention — Phase 6's entry
   above accurately describes what was built and verified at the time; this
   is where the gap was actually found.
+- **Playtest-driven tuning pass.** After manually driving `PushTPO-Lidar-*`
+  presets via `play.py`, user feedback: the lidar-only task is very hard to
+  solve as a human, and worth making more approachable rather than treated
+  as a fixed difficulty knob. Four changes, all defaults/config, no new
+  mechanics:
+  - `n_rays` default 64 → 128 (§10, §7): finer angular resolution, cheap
+    (ray casting isn't the throughput bottleneck at this scale per Phase 9's
+    benchmark).
+  - `render.py`'s lidar visualisation switched from a full line per ray
+    (pusher → hit point) to a single dot at the hit point (`_draw_lidar_rays`
+    renamed `_draw_lidar_hits`). At 64 rays the line fan was already busy;
+    at 128 it would be unreadable. Dots read as a point-cloud silhouette of
+    what's actually in range instead of visual noise radiating from the
+    pusher — confirmed by eye on `02_lidar_rays`/`04_multi_object_assignment`
+    (regenerated, `01`/`03`/`05` are pixel-identical since they're
+    `obs_mode="full"` scenes with no lidar drawn) and a throwaway render at
+    the new `n_rays=128` default.
+  - `Renderer.show_ground_truth` and `show_belief` default `True` → `False`
+    (§12's `G`/`B` keys). Both draw information the lidar policy cannot
+    itself see; leaving them on by default during teleop demo collection
+    risked exactly the kind of operator-behavior confound §13 already warns
+    about for mode preference, just visual instead of decision-level. `L`
+    (lidar hits) stays on by default — that *is* the sensed observation, not
+    an aid. The five canonical snapshot tests explicitly re-enable both
+    before capturing (`_enable_ground_truth_and_belief` helper in
+    `test_render.py`), since those scenes are specifically about showing the
+    ground-truth/belief draw paths, independent of the interactive default.
+  - `max_steps` default 300 → 600, doubling the per-episode budget given the
+    task is materially harder than anticipated at design time.
+
+  Updated `SPEC.md` defaults table and prose in lockstep (§7, §10, §12) per
+  `test_config.py`'s exact-match contract with the config dataclass, and
+  `tests/test_config.py`'s `EXPECTED_DEFAULTS`. Fixed the two render tests
+  whose assertions encoded the old default (`test_b_toggles_belief_overlay`,
+  `test_g_toggles_ground_truth` now assert off→on instead of on→off) and
+  renamed/reordered `test_toggling_ground_truth_off_changes_the_frame` to
+  `..._on_changes_the_frame` (captures the off-by-default frame first, then
+  the explicitly-enabled one). Full suite green (168 passed) after
+  regenerating the two affected snapshots.
+- **Second playtest note: `play.py` starts each rollout mid-lurch.** Root
+  cause: `play.py`'s loop feeds `mouse_to_action(pygame.mouse.get_pos(), ...)`
+  into `env.step()` every iteration unconditionally, including the very first
+  iteration after an auto-reset on episode end — the pusher's PD controller
+  immediately targets wherever the mouse happens to be left over from the
+  previous rollout, producing a hard yank before the operator can react.
+  `Renderer.paused` already existed (Space key) but nothing gated stepping on
+  it — it only skipped the *draw* call, since `env.step()` doesn't consult
+  render state and `Renderer.render()`'s pause branch runs after event
+  handling but returns before drawing.
+  Fix, script-side only (didn't touch `PushTPOEnv.reset()` or
+  `demo_collection.py` — see below): `Renderer._handle_keydown`'s `K_r` case
+  now sets `self.paused = True` right after `self.env.reset()`, and
+  `play.py`'s loop checks `renderer.paused` before building an action —
+  while paused it just calls `env.render()` (still pumps events, so Space/
+  Tab/Esc/etc. keep working, clock-limited to FPS) and skips `env.step()`
+  entirely. `play.py`'s auto-reset-on-episode-end branch and `_make_env`
+  (used for both the initial preset and `Tab` cycling) now pause the same
+  way, so every rollout — including the first — starts paused until Space,
+  giving the operator a uniform "reposition mouse, then go" beat. Updated
+  `test_r_resets_the_episode` to assert the post-R paused state;
+  `test_space_toggles_pause` needed no change since `env.reset()` itself was
+  deliberately left alone.
+  `scripts/collect_demos.py` has the identical bug (`collect_one_episode`
+  steps on the mouse position immediately after its internal `env.reset()`)
+  but wasn't touched here — fixing it means gating inside `collect_one_episode`
+  itself (the reset-and-step-loop is one function, not split across a
+  script-level loop like `play.py`'s), which would require simulating a Space
+  press in the five `test_demo_collection.py` tests that currently expect
+  stepping to start immediately. Left for a follow-up since it's a more
+  invasive change than this playtest note asked for.
+- **Follow-up: fixed `collect_demos.py` too**, per explicit request — a
+  script-level "holding page" rather than touching `collect_one_episode` /
+  `demo_collection.py`, so the five existing `test_demo_collection.py` tests
+  (which expect stepping to start immediately after reset, no Space
+  simulated) stay untouched. Added `_await_next_rollout(env)` in
+  `collect_demos.py`: pauses the renderer and spins on `env.render()` (still
+  pumps events, so Space/Esc/N/etc. work) until either `paused` clears
+  (Space — proceed) or `env._renderer` goes `None` (Esc/window close —
+  quit), called at the top of the episode loop so it gates the first
+  episode, post-KEPT, and post-DISCARDED transitions uniformly, unlike the
+  originally-suggested single insertion point (which only covered the
+  post-KEPT path and would've left the discard path re-stepping on stale
+  mouse position).
+  Hit a real bug writing this: pausing *before* the very first `reset()`
+  isn't safe the way it is in `play.py` (which only ever pauses after a
+  successful reset) — `Renderer.render()` checks `self.paused` *after*
+  processing events, so a Space keydown already queued when the hold starts
+  flips `paused` back to `False` and falls through to the draw calls in that
+  same `render()` invocation, crashing on `_pusher_body.position` being
+  `None` pre-reset. Fixed by giving `main()` an initial `env.reset(seed=
+  args.seed_start)` before entering the loop, so physics state always exists
+  by the time anything can unpause — and since `collect_one_episode`'s first
+  call reuses the same seed, this "throwaway" reset isn't actually wasted:
+  by this repo's own determinism guarantee (§14, `test_determinism.py`) it
+  produces a bit-identical layout, so the frame the operator previews during
+  the very first hold *is* the upcoming episode, not a decoy.
+  Verified by driving the real module functions directly (not a subprocess —
+  `pygame.event.post` from a second thread hit `pygame.error: video system
+  not initialized` under `SDL_VIDEODRIVER=dummy`, so drove `_await_next_rollout`
+  / `collect_one_episode` in-process instead): quit-during-hold, Space-during-
+  hold with a same-position pusher assertion (hold genuinely doesn't step
+  physics), R-then-Space during hold, and a full two-episode run through
+  `ReplayBufferWriter` confirming `n_episodes=2`/`n_steps` match. Full suite
+  green (168 passed), pyrefly clean.
+- **Third playtest note: can't see object colours.** Objects were recoloured
+  live to match their currently-assigned goal rect (`_draw_objects` picked
+  `rect_colors[assignment[i]]`), per §12's original item 3 — meant to make
+  the agent's implicit mode/box commitment visible. Useless to an operator
+  who can't distinguish the palette, and asked whether to go further: since
+  `assignment_mode="free"` (the default, and the only mode any preset uses)
+  already resolves objects to boxes via optimal bipartite matching — i.e.
+  success was *already* order-agnostic, no policy or human ever had to send
+  a particular object to a particular box — the actual ask reduced to
+  dropping the now-misleading colour cue, not changing reward/success logic
+  at all. Confirmed the alternative (drop the one-to-one matching entirely,
+  let objects double up in one box) explicitly before touching anything,
+  since that *would* have been a reward-semantics change; user chose to keep
+  matching as-is and just fix the display.
+  `_draw_objects` now always draws every object in one neutral colour
+  (renamed `_UNASSIGNED_OBJECT_COLOR` → `_OBJECT_COLOR`, since "unassigned"
+  no longer means anything special); `_draw_goal_rects` no longer needs to
+  return `(rect_colors, assignment)` since nothing downstream consumes them
+  anymore (goal-rect outlines keep their per-index palette colour and the
+  green satisfied-fill, both unaffected — only the *object* fill colour
+  changed). Updated §12 item 3's prose to match. Renamed the now-inaccurate
+  `test_snapshot_multi_object_recoloring_under_assignment` →
+  `test_snapshot_multi_object_scene` and its golden
+  `04_multi_object_assignment.png` → `04_multi_object.png`. Regenerated all
+  five canonical snapshots (object colour is global, so every scene with
+  `show_ground_truth` on changed) and reviewed each by eye: goal-rect
+  palette and the green "satisfied" fill both still distinct from the now-
+  uniform grey objects. Full suite green (168 passed), pyrefly clean.
+- **Fourth playtest note: does the observation include per-rect occupancy?**
+  User asked directly rather than assuming; answer is no in either
+  `obs_mode` — `_goal_rect_full_features`/`_goal_rect_lidar_features` only
+  ever encode static task spec (`center`, `cos/sin angle`, `half_extents`,
+  and `accepts` for lidar mode); `is_success`/`containment_errors`/
+  `assignment` are computed solely into `info`, never `obs`. Following up on
+  their own answer, user then caught that `Renderer._draw_goal_rects`'s
+  green "currently satisfied" fill was being computed unconditionally
+  (`if info is not None`, not gated on `show_ground_truth`) — so even with
+  helpers off by default (this same log, playtest note 1) it was still
+  leaking exactly this un-observed occupancy/success signal to a teleop
+  operator on every frame. Real bug, not a hypothetical: it's the same
+  category as the ground-truth/belief default-off fix, just missed because
+  `_draw_goal_rects` (rect outlines, always fair — rects are given directly
+  in the observation) and its satisfied-highlight computation live in the
+  same method, and only the outline-drawing half was ever gated.
+  Fix: gate `satisfied_rects` computation on `self.show_ground_truth`
+  (one-line condition change), leaving the per-index outline/base-fill
+  drawing unconditional as before. No snapshot regeneration needed —
+  `test_snapshot_satisfied_goal_turns_green` already forces
+  `show_ground_truth = True` via `_enable_ground_truth_and_belief` (playtest
+  note 1's helper), so it still exercises and passes against the green fill
+  unchanged. Full suite green (168 passed), pyrefly clean.
+- Unrelated to the above: `config.py`'s `max_steps` was hand-edited to
+  `1000` outside this session (was `600`, this log's playtest note 1),
+  desyncing `test_config.py`'s `EXPECTED_DEFAULTS`/`SPEC.md` §6/§10 from the
+  dataclass and red-lining `test_default_values_match_spec_table`. Not
+  reverted (per this repo's own convention, SPEC.md follows the config, not
+  the other way round, same as every other default change in this log) —
+  updated the two doc/test references to `1000` to restore the contract.

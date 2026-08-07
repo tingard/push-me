@@ -29,7 +29,9 @@ def _copy_info(info: dict) -> dict:
 def _rollout(config: PushTPOConfig, seed: int, actions: list[np.ndarray]) -> list[tuple]:
     env = PushTPOEnv(config)
     obs, info = env.reset(seed=seed)
-    trace = [(obs.copy(), None, None, None, _copy_info(info))]
+    trace: list[tuple[np.ndarray, float | None, bool | None, bool | None, dict]] = [
+        (obs.copy(), None, None, None, _copy_info(info))
+    ]
     for a in actions:
         obs, reward, terminated, truncated, info = env.step(a)
         trace.append((obs.copy(), reward, terminated, truncated, _copy_info(info)))

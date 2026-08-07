@@ -21,6 +21,7 @@ def test_collect_one_episode_kept_records_all_fields_with_matching_length(sdl_du
     outcome, steps = collect_one_episode(env, seed=0, get_action=_fixed_action_source())
 
     assert outcome is EpisodeOutcome.KEPT
+    assert steps is not None
     assert set(steps) == set(RECORDED_FIELDS)
     lengths = {len(arr) for arr in steps.values()}
     assert lengths == {5}
@@ -32,6 +33,7 @@ def test_collect_one_episode_records_both_observation_modes_at_correct_dims(sdl_
     env = PushTPOEnv(cfg, render_mode="human")
 
     _outcome, steps = collect_one_episode(env, seed=1, get_action=_fixed_action_source())
+    assert steps is not None
 
     expected_full_dim = 4 + cfg.n_objects * (7 + 9) + cfg.n_objects * 6
     expected_lidar_dim = 4 + cfg.n_rays * 4 + cfg.n_objects * (6 + 9)
@@ -83,6 +85,7 @@ def test_collect_one_episode_achieved_mode_and_assignment_are_recorded_per_step(
     env = PushTPOEnv(cfg, render_mode="human")
 
     _outcome, steps = collect_one_episode(env, seed=4, get_action=_fixed_action_source())
+    assert steps is not None
     assert steps["achieved_mode"].shape == (4, 1)
     assert steps["assignment"].shape == (4, 1)
     env.close()

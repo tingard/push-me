@@ -9,7 +9,7 @@ import pymunk
 from gymnasium import spaces
 
 from push_me.config import PushTPOConfig
-from push_me.geometry import containment_error, min_area_rect, rect_corners, rects_overlap, contains
+from push_me.geometry import RectLike, containment_error, min_area_rect, rect_corners, rects_overlap, contains
 from push_me.goals import GoalRect, resolve_assignment, sample_goal_rects
 from push_me.lidar import N_HIT_CLASSES, HitClass, cast_rays
 from push_me.shapes import SHAPES, ShapeDef, make_shape
@@ -113,10 +113,12 @@ class PushTPOEnv(gym.Env):
         self._goal_rects = sample_goal_rects(self._rng, self._object_shapes, cfg.goal_margin, cfg.arena_size)
 
         pusher_pose = self._build_pusher()
-        self._object_bodies = self._build_objects(taken=list(self._goal_rects) + [pusher_pose])
+        taken: list[RectLike] = [*self._goal_rects, pusher_pose]
+        self._object_bodies = self._build_objects(taken=taken)
         self._traps = self._build_traps() if cfg.traps else []
         self._build_occluder_walls()
 
+        assert self._pusher_body is not None
         self._target = np.array(self._pusher_body.position, dtype=np.float64)
         self._step_count = 0
         self._success_streak = 0
@@ -133,6 +135,8 @@ class PushTPOEnv(gym.Env):
         return obs, self._last_info
 
     def step(self, action):
+        assert self._space is not None
+        assert self._pusher_body is not None
         cfg = self.config
         action = np.asarray(action, dtype=np.float64)
         if cfg.action_mode == "absolute":
@@ -170,6 +174,7 @@ class PushTPOEnv(gym.Env):
         if self.render_mode is None:
             return None
         self._ensure_renderer()
+        assert self._renderer is not None
         result = self._renderer.render(self._last_reward)
         if self._renderer.close_requested:
             self.close()
@@ -177,6 +182,7 @@ class PushTPOEnv(gym.Env):
 
     def set_belief_overlay(self, fn) -> None:
         self._ensure_renderer()
+        assert self._renderer is not None
         self._renderer.set_belief_overlay(fn)
 
     def close(self) -> None:
@@ -217,6 +223,7 @@ class PushTPOEnv(gym.Env):
         raise ValueError(f"unknown shape_sampling: {cfg.shape_sampling!r}")
 
     def _build_walls(self) -> None:
+        assert self._space is not None
         cfg = self.config
         s = cfg.arena_size
         corners = [(0, 0), (s, 0), (s, s), (0, s)]
@@ -233,6 +240,7 @@ class PushTPOEnv(gym.Env):
         self._wall_segments = segs
 
     def _build_occluder_walls(self) -> None:
+        assert self._space is not None
         cfg = self.config
         self._occluder_segments = []
         for _ in range(cfg.occluder_walls):
@@ -252,12 +260,14 @@ class PushTPOEnv(gym.Env):
             self._space.add(body, seg)
             self._occluder_segments.append(seg)
 
-    def _sample_free_pose(self, half_extents: np.ndarray, taken: list, max_attempts: int = 1000) -> _Pose:
+    def _sample_free_pose(
+        self, half_extents: np.ndarray, taken: list[RectLike], max_attempts: int = 1000
+    ) -> _Pose:
         cfg = self.config
         for _ in range(max_attempts):
             candidate = _Pose(
                 center=np.array([self._rng.uniform(0, cfg.arena_size), self._rng.uniform(0, cfg.arena_size)]),
-                angle=float(self._rng.uniform(0, 2 * np.pi)),
+                angle=self._rng.uniform(0, 2 * np.pi),
                 half_extents=half_extents,
             )
             corners = rect_corners(candidate)
@@ -272,6 +282,7 @@ class PushTPOEnv(gym.Env):
         )
 
     def _build_pusher(self) -> _Pose:
+        assert self._space is not None
         cfg = self.config
         r = cfg.pusher_radius
         pose = self._sample_free_pose(np.array([r, r]), taken=list(self._goal_rects))
@@ -287,7 +298,8 @@ class PushTPOEnv(gym.Env):
         self._pusher_body = body
         return pose
 
-    def _build_objects(self, taken: list) -> list[pymunk.Body]:
+    def _build_objects(self, taken: list[RectLike]) -> list[pymunk.Body]:
+        assert self._space is not None
         bodies = []
         for idx, shape in enumerate(self._object_shapes):
             half_extents, _phi = self._object_min_rects[idx]
@@ -307,6 +319,7 @@ class PushTPOEnv(gym.Env):
         return bodies
 
     def _build_traps(self) -> list[_Pose]:
+        assert self._space is not None
         cfg = self.config
         r = cfg.pusher_radius
         w_out, w_in, depth = 3.0 * r, 0.6 * r, 2.0 * r
@@ -325,7 +338,7 @@ class PushTPOEnv(gym.Env):
         pocket_local_half_extents = np.array([w_pocket, (throat_y + half_h) / 2.0])
         bbox_half_extents = np.array([max(w_out, w_pocket), half_h])
 
-        taken = list(self._goal_rects)
+        taken: list[RectLike] = list(self._goal_rects)
         traps = []
         self._trap_wall_segments = []
         for _ in range(cfg.n_traps):
@@ -357,6 +370,7 @@ class PushTPOEnv(gym.Env):
     def _apply_pd_force(self) -> None:
         cfg = self.config
         body = self._pusher_body
+        assert body is not None
         pos = np.array(body.position)
         vel = np.array(body.velocity)
         force = cfg.kp * (self._target - pos) - cfg.kd * vel
@@ -368,6 +382,8 @@ class PushTPOEnv(gym.Env):
     # ---- perception ----
 
     def _cast_lidar(self) -> tuple[np.ndarray, np.ndarray]:
+        assert self._pusher_body is not None
+        assert self._space is not None
         cfg = self.config
         origin = tuple(self._pusher_body.position)
         query_filter = pymunk.ShapeFilter(mask=pymunk.ShapeFilter.ALL_MASKS() ^ _CATEGORY_PUSHER)
@@ -410,6 +426,7 @@ class PushTPOEnv(gym.Env):
         raise ValueError(f"unknown obs_mode: {obs_mode!r}")
 
     def _pusher_state(self) -> np.ndarray:
+        assert self._pusher_body is not None
         cfg = self.config
         pos = _normalise_position(np.array(self._pusher_body.position), cfg.arena_size)
         vel = np.array(self._pusher_body.velocity, dtype=np.float32)
@@ -451,6 +468,7 @@ class PushTPOEnv(gym.Env):
 
     def _lidar_observation(self, lidar_features: np.ndarray | None = None) -> np.ndarray:
         features = self._lidar_features if lidar_features is None else lidar_features
+        assert features is not None
         parts = [self._pusher_state(), features.flatten().astype(np.float32)]
         parts += [self._goal_rect_lidar_features(rect) for rect in self._goal_rects]
         return np.concatenate(parts).astype(np.float32)
