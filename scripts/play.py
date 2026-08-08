@@ -29,8 +29,12 @@ def _make_env(preset_id: str, seed: int | None) -> PushTPOEnv:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Manually play a PushT-PO preset with mouse teleop.")
-    parser.add_argument("--preset", default="PushTPO-Lidar-Multi3-v0", choices=_PRESET_IDS)
+    parser = argparse.ArgumentParser(
+        description="Manually play a PushT-PO preset with mouse teleop."
+    )
+    parser.add_argument(
+        "--preset", default="PushTPO-Lidar-Multi3-v0", choices=_PRESET_IDS
+    )
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
 

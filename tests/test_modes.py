@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
-from push_me.geometry import contains, containment_error
+from push_me.geometry import containment_error, contains
 from push_me.goals import make_goal_rect
 from push_me.shapes import SHAPES, make_shape
 

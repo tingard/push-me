@@ -4,7 +4,8 @@ import itertools
 
 import numpy as np
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from push_me.geometry import min_area_rect, rects_overlap
 from push_me.goals import make_goal_rect, sample_goal_rects
@@ -82,4 +83,6 @@ def test_sample_goal_rects_raises_when_infeasible():
     rng = np.random.default_rng(0)
     huge = make_shape("hexagon", _SHAPE_AREA * 1000)
     with pytest.raises(RuntimeError):
-        sample_goal_rects(rng, [huge, huge, huge], margin=8.0, arena_size=_ARENA_SIZE, max_attempts=20)
+        sample_goal_rects(
+            rng, [huge, huge, huge], margin=8.0, arena_size=_ARENA_SIZE, max_attempts=20
+        )

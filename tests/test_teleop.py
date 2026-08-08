@@ -10,10 +10,12 @@ def test_mouse_to_action_maps_corners():
     arena_size = 512.0
     # pixel origin (top-left) is world (0, arena_size) after the y-flip
     assert mouse_to_action((0, 0), arena_size) == pytest.approx([-1.0, 1.0])
-    assert mouse_to_action((ARENA_PIXELS, ARENA_PIXELS), arena_size) == pytest.approx([1.0, -1.0])
-    assert mouse_to_action((ARENA_PIXELS // 2, ARENA_PIXELS // 2), arena_size) == pytest.approx(
-        [0.0, 0.0], abs=1e-2
+    assert mouse_to_action((ARENA_PIXELS, ARENA_PIXELS), arena_size) == pytest.approx(
+        [1.0, -1.0]
     )
+    assert mouse_to_action(
+        (ARENA_PIXELS // 2, ARENA_PIXELS // 2), arena_size
+    ) == pytest.approx([0.0, 0.0], abs=1e-2)
 
 
 def test_mouse_to_action_scales_with_arena_size():

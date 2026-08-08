@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import numpy as np
 import pygame
@@ -77,7 +77,9 @@ class Renderer:
         self._unhandled_keys: list[int] = []
         self._belief_overlay_fn: Callable[[], list[BeliefMarker] | None] | None = None
 
-    def set_belief_overlay(self, fn: Callable[[], list[BeliefMarker] | None] | None) -> None:
+    def set_belief_overlay(
+        self, fn: Callable[[], list[BeliefMarker] | None] | None
+    ) -> None:
         self._belief_overlay_fn = fn
 
     def consume_preset_cycle_request(self) -> bool:
@@ -189,7 +191,9 @@ class Renderer:
         for trap in env._traps:
             corners_px = self._to_px(rect_corners(trap))
             overlay = pygame.Surface(WINDOW_SIZE, pygame.SRCALPHA)
-            pygame.draw.polygon(overlay, (*_TRAP_COLOR, 100), [tuple(p) for p in corners_px])
+            pygame.draw.polygon(
+                overlay, (*_TRAP_COLOR, 100), [tuple(p) for p in corners_px]
+            )
             self.screen.blit(overlay, (0, 0))
 
     def _draw_goal_rects(self) -> None:
@@ -212,7 +216,9 @@ class Renderer:
 
         for i, rect in enumerate(env._goal_rects):
             corners_px = [tuple(p) for p in self._to_px(rect_corners(rect))]
-            fill = (60, 200, 110, 110) if i in satisfied_rects else (*rect_colors[i], 55)
+            fill = (
+                (60, 200, 110, 110) if i in satisfied_rects else (*rect_colors[i], 55)
+            )
             overlay = pygame.Surface(WINDOW_SIZE, pygame.SRCALPHA)
             pygame.draw.polygon(overlay, fill, corners_px)
             self.screen.blit(overlay, (0, 0))
@@ -238,7 +244,9 @@ class Renderer:
         for i, angle in enumerate(angles):
             dist_norm = env._lidar_features[i, 0]
             hit_class = HitClass(int(np.argmax(env._lidar_features[i, 1:])))
-            hit_world = origin_world + dist_norm * lidar_range * np.array([np.cos(angle), np.sin(angle)])
+            hit_world = origin_world + dist_norm * lidar_range * np.array(
+                [np.cos(angle), np.sin(angle)]
+            )
             hit_px = tuple(self._to_px(hit_world))
             pygame.draw.circle(self.screen, _LIDAR_COLORS[hit_class], hit_px, 2)
 
@@ -270,7 +278,9 @@ class Renderer:
                 text = self.font.render(marker.label, True, _BELIEF_COLOR)
                 self.screen.blit(text, label_px)
 
-    def _draw_dashed_polygon(self, points_px: np.ndarray, color: tuple[int, int, int, int]) -> None:
+    def _draw_dashed_polygon(
+        self, points_px: np.ndarray, color: tuple[int, int, int, int]
+    ) -> None:
         overlay = pygame.Surface(WINDOW_SIZE, pygame.SRCALPHA)
         n = len(points_px)
         for i in range(n):
@@ -278,7 +288,13 @@ class Renderer:
         self.screen.blit(overlay, (0, 0))
 
     def _draw_dashed_line(
-        self, surface: pygame.Surface, a: np.ndarray, b: np.ndarray, color, dash_len: float = 6, gap_len: float = 4
+        self,
+        surface: pygame.Surface,
+        a: np.ndarray,
+        b: np.ndarray,
+        color,
+        dash_len: float = 6,
+        gap_len: float = 4,
     ) -> None:
         length = float(np.linalg.norm(b - a))
         if length == 0:
@@ -289,13 +305,23 @@ class Renderer:
         while pos < length:
             seg_end = min(pos + (dash_len if drawing else gap_len), length)
             if drawing:
-                pygame.draw.line(surface, color, tuple(a + direction * pos), tuple(a + direction * seg_end), 2)
+                pygame.draw.line(
+                    surface,
+                    color,
+                    tuple(a + direction * pos),
+                    tuple(a + direction * seg_end),
+                    2,
+                )
             pos = seg_end
             drawing = not drawing
 
     def _draw_panel(self, last_reward: float | None) -> None:
         env = self.env
-        pygame.draw.rect(self.screen, _PANEL_BG, pygame.Rect(ARENA_PIXELS, 0, PANEL_WIDTH, ARENA_PIXELS))
+        pygame.draw.rect(
+            self.screen,
+            _PANEL_BG,
+            pygame.Rect(ARENA_PIXELS, 0, PANEL_WIDTH, ARENA_PIXELS),
+        )
         x0 = ARENA_PIXELS + 10
         y = 10
 

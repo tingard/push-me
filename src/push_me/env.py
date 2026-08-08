@@ -9,7 +9,14 @@ import pymunk
 from gymnasium import spaces
 
 from push_me.config import PushTPOConfig
-from push_me.geometry import RectLike, containment_error, min_area_rect, rect_corners, rects_overlap, contains
+from push_me.geometry import (
+    RectLike,
+    containment_error,
+    contains,
+    min_area_rect,
+    rect_corners,
+    rects_overlap,
+)
 from push_me.goals import GoalRect, resolve_assignment, sample_goal_rects
 from push_me.lidar import N_HIT_CLASSES, HitClass, cast_rays
 from push_me.shapes import SHAPES, ShapeDef, make_shape
@@ -50,7 +57,9 @@ def _normalise_position(pos: np.ndarray, arena_size: float) -> np.ndarray:
     return np.asarray(pos, dtype=np.float32) / arena_size * 2.0 - 1.0
 
 
-def _make_object_body(shape: ShapeDef, density: float) -> tuple[pymunk.Body, list[pymunk.Poly]]:
+def _make_object_body(
+    shape: ShapeDef, density: float
+) -> tuple[pymunk.Body, list[pymunk.Poly]]:
     total_mass = 0.0
     total_moment = 0.0
     for part in shape.convex_parts:
@@ -63,9 +72,8 @@ def _make_object_body(shape: ShapeDef, density: float) -> tuple[pymunk.Body, lis
 
 
 class PushTPOEnv(gym.Env):
-    metadata = {"render_modes": ["human", "rgb_array"]}
-
     def __init__(self, config: PushTPOConfig, render_mode: str | None = None):
+        self.metadata = {"render_modes": ["human", "rgb_array"]}
         if render_mode is not None and render_mode not in self.metadata["render_modes"]:
             raise ValueError(f"unknown render_mode: {render_mode!r}")
         self.config = copy.deepcopy(config)
@@ -109,8 +117,12 @@ class PushTPOEnv(gym.Env):
         self._build_walls()
         shape_names = self._resolve_shape_names()
         self._object_shapes = [make_shape(name, cfg.shape_area) for name in shape_names]
-        self._object_min_rects = [min_area_rect(shape.outline) for shape in self._object_shapes]
-        self._goal_rects = sample_goal_rects(self._rng, self._object_shapes, cfg.goal_margin, cfg.arena_size)
+        self._object_min_rects = [
+            min_area_rect(shape.outline) for shape in self._object_shapes
+        ]
+        self._goal_rects = sample_goal_rects(
+            self._rng, self._object_shapes, cfg.goal_margin, cfg.arena_size
+        )
 
         pusher_pose = self._build_pusher()
         taken: list[RectLike] = [*self._goal_rects, pusher_pose]
@@ -161,7 +173,11 @@ class PushTPOEnv(gym.Env):
         terminated = self._success_streak >= cfg.success_hold_steps
         truncated = self._step_count >= cfg.max_steps
 
-        dense_term = 0.0 if cfg.sparse_only else cfg.dense_weight * float(np.sum(info["containment_errors"]))
+        dense_term = (
+            0.0
+            if cfg.sparse_only
+            else cfg.dense_weight * float(np.sum(info["containment_errors"]))
+        )
         reward = cfg.success_bonus * float(is_success) - dense_term
         self._last_reward = reward
 
@@ -193,7 +209,9 @@ class PushTPOEnv(gym.Env):
     def _ensure_renderer(self) -> None:
         if self._renderer is None:
             if self.render_mode is None:
-                raise ValueError("cannot render/set a belief overlay when render_mode is None")
+                raise ValueError(
+                    "cannot render/set a belief overlay when render_mode is None"
+                )
             from push_me.render import Renderer
 
             self._renderer = Renderer(self, self.render_mode)
@@ -266,7 +284,12 @@ class PushTPOEnv(gym.Env):
         cfg = self.config
         for _ in range(max_attempts):
             candidate = _Pose(
-                center=np.array([self._rng.uniform(0, cfg.arena_size), self._rng.uniform(0, cfg.arena_size)]),
+                center=np.array(
+                    [
+                        self._rng.uniform(0, cfg.arena_size),
+                        self._rng.uniform(0, cfg.arena_size),
+                    ]
+                ),
                 angle=self._rng.uniform(0, 2 * np.pi),
                 half_extents=half_extents,
             )
@@ -361,7 +384,13 @@ class PushTPOEnv(gym.Env):
             self._trap_wall_segments.extend(segs)
 
             pocket_center = pocket_local_center @ r_mat.T + pose.center
-            traps.append(_Pose(center=pocket_center, angle=pose.angle, half_extents=pocket_local_half_extents))
+            traps.append(
+                _Pose(
+                    center=pocket_center,
+                    angle=pose.angle,
+                    half_extents=pocket_local_half_extents,
+                )
+            )
             taken.append(pose)
         return traps
 
@@ -386,7 +415,9 @@ class PushTPOEnv(gym.Env):
         assert self._space is not None
         cfg = self.config
         origin = tuple(self._pusher_body.position)
-        query_filter = pymunk.ShapeFilter(mask=pymunk.ShapeFilter.ALL_MASKS() ^ _CATEGORY_PUSHER)
+        query_filter = pymunk.ShapeFilter(
+            mask=pymunk.ShapeFilter.ALL_MASKS() ^ _CATEGORY_PUSHER
+        )
         return cast_rays(self._space, origin, cfg.n_rays, cfg.lidar_range, query_filter)
 
     def _refresh_perception(self) -> None:
@@ -440,7 +471,9 @@ class PushTPOEnv(gym.Env):
         vel = np.array(body.velocity, dtype=np.float32)
         omega = np.array([body.angular_velocity], dtype=np.float32)
         onehot = _one_hot(_SHAPE_INDEX[self._object_shapes[i].name], _N_SHAPES)
-        return np.concatenate([pos, [np.cos(theta), np.sin(theta)], vel, omega, onehot]).astype(np.float32)
+        return np.concatenate(
+            [pos, [np.cos(theta), np.sin(theta)], vel, omega, onehot]
+        ).astype(np.float32)
 
     def _goal_rect_full_features(self, rect: GoalRect) -> np.ndarray:
         cfg = self.config
@@ -463,10 +496,17 @@ class PushTPOEnv(gym.Env):
         for name in rect.accepts:
             accepts_onehot[_SHAPE_INDEX[name]] = 1.0
         return np.concatenate(
-            [center, [np.cos(rect.angle), np.sin(rect.angle)], rect.half_extents, accepts_onehot]
+            [
+                center,
+                [np.cos(rect.angle), np.sin(rect.angle)],
+                rect.half_extents,
+                accepts_onehot,
+            ]
         ).astype(np.float32)
 
-    def _lidar_observation(self, lidar_features: np.ndarray | None = None) -> np.ndarray:
+    def _lidar_observation(
+        self, lidar_features: np.ndarray | None = None
+    ) -> np.ndarray:
         features = self._lidar_features if lidar_features is None else lidar_features
         assert features is not None
         parts = [self._pusher_state(), features.flatten().astype(np.float32)]
@@ -483,7 +523,7 @@ class PushTPOEnv(gym.Env):
         theta_rel = theta_obj - (rect.angle - phi)
         n = shape.symmetry_order
         step = 2 * np.pi / n
-        return int(round(np.mod(theta_rel, 2 * np.pi) / step)) % n
+        return round(np.mod(theta_rel, 2 * np.pi) / step) % n
 
     def _count_trapped_objects(self) -> int:
         if not self._traps:
@@ -499,7 +539,10 @@ class PushTPOEnv(gym.Env):
         cfg = self.config
         outlines_world = [self._object_outline_world(i) for i in range(cfg.n_objects)]
         cost = np.array(
-            [[containment_error(rect, outline) for rect in self._goal_rects] for outline in outlines_world]
+            [
+                [containment_error(rect, outline) for rect in self._goal_rects]
+                for outline in outlines_world
+            ]
         )
         assignment, errors = resolve_assignment(cost, mode=cfg.assignment_mode)
         is_success = bool(np.all(errors <= 0))
@@ -507,7 +550,10 @@ class PushTPOEnv(gym.Env):
             [self._achieved_mode(i, int(assignment[i])) for i in range(cfg.n_objects)]
         )
         object_poses = np.array(
-            [[*self._object_bodies[i].position, self._object_bodies[i].angle] for i in range(cfg.n_objects)]
+            [
+                [*self._object_bodies[i].position, self._object_bodies[i].angle]
+                for i in range(cfg.n_objects)
+            ]
         )
         return {
             "is_success": is_success,

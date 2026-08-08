@@ -4,7 +4,8 @@ import itertools
 
 import numpy as np
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
 from push_me.goals import resolve_assignment
@@ -13,7 +14,9 @@ _cost_matrices = st.integers(min_value=1, max_value=5).flatmap(
     lambda k: arrays(
         dtype=float,
         shape=(k, k),
-        elements=st.floats(min_value=0.0, max_value=1000.0, allow_nan=False, allow_infinity=False),
+        elements=st.floats(
+            min_value=0.0, max_value=1000.0, allow_nan=False, allow_infinity=False
+        ),
     )
 )
 
@@ -21,7 +24,8 @@ _cost_matrices = st.integers(min_value=1, max_value=5).flatmap(
 def _brute_force_min_cost(cost: np.ndarray) -> float:
     k = cost.shape[0]
     return min(
-        sum(cost[i, perm[i]] for i in range(k)) for perm in itertools.permutations(range(k))
+        sum(cost[i, perm[i]] for i in range(k))
+        for perm in itertools.permutations(range(k))
     )
 
 

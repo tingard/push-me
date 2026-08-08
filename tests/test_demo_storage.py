@@ -5,12 +5,19 @@ import pytest
 import zarr
 
 from push_me.config import PushTPOConfig
-from push_me.demo_storage import ReplayBufferWriter, read_config, read_episode, summarize_achieved_modes
+from push_me.demo_storage import (
+    ReplayBufferWriter,
+    read_config,
+    read_episode,
+    summarize_achieved_modes,
+)
 
 
 def _episode(n_steps: int, obj_mode_value: int) -> dict[str, np.ndarray]:
     return {
-        "obs_full": np.random.default_rng(0).normal(size=(n_steps, 5)).astype(np.float32),
+        "obs_full": np.random.default_rng(0)
+        .normal(size=(n_steps, 5))
+        .astype(np.float32),
         "action": np.random.default_rng(0).normal(size=(n_steps, 2)).astype(np.float32),
         "achieved_mode": np.full((n_steps, 1), obj_mode_value, dtype=np.int64),
     }
@@ -48,13 +55,18 @@ def test_append_episode_rejects_mismatched_field_lengths(tmp_path):
     with pytest.raises(ValueError):
         writer.append_episode(
             seed=0,
-            steps={"obs_full": np.zeros((10, 5), dtype=np.float32), "action": np.zeros((9, 2), dtype=np.float32)},
+            steps={
+                "obs_full": np.zeros((10, 5), dtype=np.float32),
+                "action": np.zeros((9, 2), dtype=np.float32),
+            },
         )
 
 
 def test_append_empty_episode_is_a_no_op(tmp_path):
     writer = ReplayBufferWriter(tmp_path / "demos.zarr", PushTPOConfig(n_objects=1))
-    writer.append_episode(seed=0, steps={"obs_full": np.zeros((0, 5), dtype=np.float32)})
+    writer.append_episode(
+        seed=0, steps={"obs_full": np.zeros((0, 5), dtype=np.float32)}
+    )
     assert writer.n_episodes == 0
 
 

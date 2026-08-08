@@ -6,7 +6,10 @@ from hypothesis import HealthCheck, settings
 
 settings.register_profile("default", max_examples=100)
 settings.register_profile(
-    "pymunk", max_examples=50, deadline=None, suppress_health_check=[HealthCheck.too_slow]
+    "pymunk",
+    max_examples=50,
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
 )
 settings.load_profile("default")
 
@@ -53,14 +56,20 @@ def assert_matches_snapshot(request):
             pygame.image.save(surface, str(path))
             return
 
-        golden = np.transpose(pygame.surfarray.array3d(pygame.image.load(str(path))), (1, 0, 2))
-        assert frame.shape == golden.shape, f"{name}: shape {frame.shape} != golden {golden.shape}"
+        golden = np.transpose(
+            pygame.surfarray.array3d(pygame.image.load(str(path))), (1, 0, 2)
+        )
+        assert frame.shape == golden.shape, (
+            f"{name}: shape {frame.shape} != golden {golden.shape}"
+        )
 
         diff = np.abs(frame.astype(int) - golden.astype(int))
         mean_diff = float(diff.mean())
         outlier_frac = float((diff.max(axis=-1) > outlier_threshold).mean())
 
-        assert mean_diff < mean_tol, f"{name}: mean pixel diff {mean_diff:.3f} >= tolerance {mean_tol}"
+        assert mean_diff < mean_tol, (
+            f"{name}: mean pixel diff {mean_diff:.3f} >= tolerance {mean_tol}"
+        )
         assert outlier_frac < outlier_frac_tol, (
             f"{name}: {outlier_frac:.2%} of pixels differ by more than {outlier_threshold}/255 "
             f"(tolerance {outlier_frac_tol:.2%})"

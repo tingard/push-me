@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from push_me.config import PushTPOConfig
 from push_me.vec import make_vec_env
@@ -22,11 +21,11 @@ def test_vec_env_reset_and_step_shapes():
     try:
         single_obs_shape = vec_env.single_observation_space.shape
         assert single_obs_shape is not None
-        obs, infos = vec_env.reset(seed=0)
+        obs, _ = vec_env.reset(seed=0)
         assert obs.shape == (2,) + single_obs_shape
 
         actions = np.stack([vec_env.single_action_space.sample() for _ in range(2)])
-        obs, rewards, terminated, truncated, infos = vec_env.step(actions)
+        obs, rewards, terminated, truncated, _ = vec_env.step(actions)
         assert obs.shape == (2,) + single_obs_shape
         assert rewards.shape == (2,)
         assert terminated.shape == (2,)
@@ -40,7 +39,9 @@ def test_vec_env_sub_envs_are_independent_not_lockstep_identical():
     vec_env = make_vec_env(cfg, n_envs=4)
     try:
         obs, _infos = vec_env.reset(seed=0)
-        assert not np.array_equal(obs[0], obs[1]), "sub-envs should not share identical seeded state"
+        assert not np.array_equal(obs[0], obs[1]), (
+            "sub-envs should not share identical seeded state"
+        )
     finally:
         vec_env.close()
 

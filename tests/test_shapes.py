@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 from scipy.optimize import linear_sum_assignment
 
 from push_me.shapes import SHAPES, make_shape
@@ -82,7 +83,9 @@ def test_outline_centroid_is_at_origin():
 
 def test_outline_is_ccw():
     for shape in SHAPES.values():
-        assert _polygon_signed_area(shape.outline) > 0, f"{shape.name} outline is not CCW"
+        assert _polygon_signed_area(shape.outline) > 0, (
+            f"{shape.name} outline is not CCW"
+        )
 
 
 def test_convex_parts_are_individually_convex():

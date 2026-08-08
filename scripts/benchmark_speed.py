@@ -10,7 +10,9 @@ from push_me.config import PushTPOConfig
 from push_me.env import PushTPOEnv
 from push_me.vec import make_vec_env
 
-_BENCHMARK_CONFIG = PushTPOConfig(n_objects=1, shapes=["t_tetromino"], obs_mode="lidar", n_rays=64)
+_BENCHMARK_CONFIG = PushTPOConfig(
+    n_objects=1, shapes=["t_tetromino"], obs_mode="lidar", n_rays=64
+)
 
 
 def run_single_process_benchmark(n_steps: int, warmup_steps: int) -> float:
@@ -66,8 +68,17 @@ def main() -> int:
     parser.add_argument("--n-steps", type=int, default=1000)
     parser.add_argument("--warmup-steps", type=int, default=50)
     parser.add_argument("--min-steps-per-sec-per-core", type=float, default=2000.0)
-    parser.add_argument("--n-envs", type=int, default=os.cpu_count() or 1, help="for the reported AsyncVectorEnv number only")
-    parser.add_argument("--skip-vec-env", action="store_true", help="skip the AsyncVectorEnv comparison run")
+    parser.add_argument(
+        "--n-envs",
+        type=int,
+        default=os.cpu_count() or 1,
+        help="for the reported AsyncVectorEnv number only",
+    )
+    parser.add_argument(
+        "--skip-vec-env",
+        action="store_true",
+        help="skip the AsyncVectorEnv comparison run",
+    )
     args = parser.parse_args()
 
     single_rate = run_single_process_benchmark(args.n_steps, args.warmup_steps)

@@ -29,10 +29,14 @@ def _await_next_rollout(env: PushTPOEnv) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Collect teleoperated demonstrations for behaviour cloning.")
+    parser = argparse.ArgumentParser(
+        description="Collect teleoperated demonstrations for behaviour cloning."
+    )
     parser.add_argument("--preset", default="PushTPO-Lidar-Multi3-v0")
     parser.add_argument("--output", required=True, help="path to the zarr store")
-    parser.add_argument("--n-episodes", type=int, default=10, help="number of KEPT episodes to collect")
+    parser.add_argument(
+        "--n-episodes", type=int, default=10, help="number of KEPT episodes to collect"
+    )
     parser.add_argument("--seed-start", type=int, default=0)
     args = parser.parse_args()
 
@@ -73,7 +77,9 @@ def main() -> int:
         assert steps is not None
         writer.append_episode(seed=seed, steps=steps)
         kept += 1
-        print(f"kept episode {kept}/{args.n_episodes} (seed={seed}, {len(steps['action'])} steps)")
+        print(
+            f"kept episode {kept}/{args.n_episodes} (seed={seed}, {len(steps['action'])} steps)"
+        )
         seed += 1
 
     env.close()

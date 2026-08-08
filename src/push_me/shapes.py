@@ -61,14 +61,23 @@ def _tetromino(
     outline_raw = np.asarray(outline_cells, dtype=float)
     offset = _centroid(outline_raw)
     outline = _ensure_ccw(outline_raw - offset)
-    parts = [_ensure_ccw(np.asarray(cells, dtype=float) - offset) for cells in part_cells]
-    return ShapeDef(name=name, outline=outline, symmetry_order=symmetry_order, convex_parts=parts)
+    parts = [
+        _ensure_ccw(np.asarray(cells, dtype=float) - offset) for cells in part_cells
+    ]
+    return ShapeDef(
+        name=name, outline=outline, symmetry_order=symmetry_order, convex_parts=parts
+    )
 
 
 def _regular_polygon(name: str, n: int, symmetry_order: int) -> ShapeDef:
     angles = 2 * np.pi * np.arange(n) / n
     outline = np.column_stack([np.cos(angles), np.sin(angles)])
-    return ShapeDef(name=name, outline=outline, symmetry_order=symmetry_order, convex_parts=[outline.copy()])
+    return ShapeDef(
+        name=name,
+        outline=outline,
+        symmetry_order=symmetry_order,
+        convex_parts=[outline.copy()],
+    )
 
 
 SHAPES: dict[str, ShapeDef] = {

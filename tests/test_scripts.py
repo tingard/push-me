@@ -11,7 +11,13 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 def _run(args: list[str]) -> subprocess.CompletedProcess:
     env = {**os.environ, "SDL_VIDEODRIVER": "dummy"}
     return subprocess.run(
-        [sys.executable, *args], capture_output=True, text=True, cwd=_REPO_ROOT, timeout=30, env=env
+        [sys.executable, *args],
+        capture_output=True,
+        text=True,
+        cwd=_REPO_ROOT,
+        timeout=30,
+        env=env,
+        check=False,
     )
 
 

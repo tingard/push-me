@@ -1,8 +1,9 @@
 [project]
 name = "push-me"
 version = "0.1.0"
-description = "Add your description here"
+description = "A partially-observable, multi-object, multi-modal-goal variant of PushT"
 readme = "README.md"
+license = "MIT"
 authors = [
     { name = "Tim Lingard", email = "tklingard@gmail.com" }
 ]
@@ -25,6 +26,7 @@ dev = [
     "hypothesis>=6.165.2",
     "pyrefly>=1.2.0",
     "pytest>=9.1.1",
+    "ruff>=0.16.2",
 ]
 
 [tool.pytest.ini_options]

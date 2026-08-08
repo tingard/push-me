@@ -127,8 +127,8 @@ centroid.
 @dataclass(frozen=True)
 class ShapeDef:
     name: str
-    outline: np.ndarray        # (V, 2) float, CCW, centroid at origin
-    symmetry_order: int        # rotational symmetry; drives mode count
+    outline: np.ndarray  # (V, 2) float, CCW, centroid at origin
+    symmetry_order: int  # rotational symmetry; drives mode count
     convex_parts: list[np.ndarray]  # convex decomposition for pymunk
 ```
 
@@ -169,10 +169,10 @@ For object with outline `O` and pose `(x, y, θ)`:
 ```python
 @dataclass
 class GoalRect:
-    center: np.ndarray      # (2,)
-    angle: float            # radians
+    center: np.ndarray  # (2,)
+    angle: float  # radians
     half_extents: np.ndarray  # (2,) already inflated
-    accepts: set[str]       # shape names this rect is sized for
+    accepts: set[str]  # shape names this rect is sized for
 ```
 
 ### Containment test
@@ -198,7 +198,7 @@ Signed penetration depth — how far outside the rectangle the worst vertex sits
 def containment_error(rect, outline_world) -> float:
     local = transform_to_rect_frame(outline_world, rect)
     excess = np.abs(local) - rect.half_extents
-    return float(np.max(excess))     # <= 0 means contained
+    return float(np.max(excess))  # <= 0 means contained
 ```
 
 ---
@@ -248,7 +248,7 @@ The agent carries a ray sensor. This is the partially-observed setting.
 
 - `n_rays` rays (default 128), uniformly spaced in `[0, 2π)`, **fixed in world frame**
   (not pusher-relative — avoids conflating rotation-equivariance with memory).
-- Range `lidar_range` (default 150 units). **This is the primary memory-horizon knob.**
+- Range `lidar_range` (default 300 units). **This is the primary memory-horizon knob.**
 - Each ray cast with `space.segment_query_first`; returns first hit only, so objects
   occlude one another naturally.
 
@@ -314,14 +314,14 @@ class PushTPOConfig:
     # task structure
     n_objects: int = 1
     shapes: list[str] = field(default_factory=lambda: ["t_tetromino"])
-    shape_sampling: str = "fixed"        # "fixed" | "random"
-    assignment_mode: str = "free"        # "free" | "fixed"
-    goal_margin: float = 8.0             # Dial 2
+    shape_sampling: str = "fixed"  # "fixed" | "random"
+    assignment_mode: str = "free"  # "free" | "fixed"
+    goal_margin: float = 8.0  # Dial 2
 
     # observability
-    obs_mode: str = "lidar"              # "lidar" | "full"
+    obs_mode: str = "lidar"  # "lidar" | "full"
     n_rays: int = 128
-    lidar_range: float = 150.0           # Dial: memory horizon
+    lidar_range: float = 300.0  # Dial: memory horizon
     occluder_walls: int = 0
 
     # arena and physics
@@ -333,7 +333,7 @@ class PushTPOConfig:
     damping: float = 0.05
 
     # control
-    action_mode: str = "absolute"        # "absolute" | "delta"
+    action_mode: str = "absolute"  # "absolute" | "delta"
     max_delta: float = 30.0
     kp: float = 100.0
     kd: float = 10.0
@@ -382,13 +382,13 @@ obs, reward, terminated, truncated, info = env.step(action)
 
 ```python
 {
-  "is_success": bool,
-  "containment_errors": np.ndarray,        # (k,) per object, best assignment
-  "assignment": np.ndarray,                # (k,) object -> rect index
-  "object_poses": np.ndarray,              # (k, 3) GROUND TRUTH — probing only
-  "steps_since_observed": np.ndarray,      # (k,) for horizon diagnostics
-  "achieved_mode": np.ndarray,             # (k,) rotational mode index 0..n-1
-  "n_objects_trapped": int,
+    "is_success": bool,
+    "containment_errors": np.ndarray,  # (k,) per object, best assignment
+    "assignment": np.ndarray,  # (k,) object -> rect index
+    "object_poses": np.ndarray,  # (k, 3) GROUND TRUTH — probing only
+    "steps_since_observed": np.ndarray,  # (k,) for horizon diagnostics
+    "achieved_mode": np.ndarray,  # (k,) rotational mode index 0..n-1
+    "n_objects_trapped": int,
 }
 ```
 
@@ -433,13 +433,14 @@ Draw order:
 Leave an explicit, documented injection point:
 
 ```python
-env.set_belief_overlay(fn)   # fn: () -> list[BeliefMarker] | None
+env.set_belief_overlay(fn)  # fn: () -> list[BeliefMarker] | None
+
 
 @dataclass
 class BeliefMarker:
-    pose: np.ndarray          # (3,) x, y, theta — predicted object pose
+    pose: np.ndarray  # (3,) x, y, theta — predicted object pose
     shape_name: str
-    confidence: float = 1.0   # drives alpha
+    confidence: float = 1.0  # drives alpha
     label: str = ""
 ```
 

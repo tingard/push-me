@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import Enum, auto
-from typing import Callable
 
 import numpy as np
 import pygame
@@ -17,7 +17,14 @@ _INFO_FIELDS = (
     "achieved_mode",
     "n_objects_trapped",
 )
-RECORDED_FIELDS = ("obs_full", "obs_lidar", "action", "reward", "terminated", "truncated") + _INFO_FIELDS
+RECORDED_FIELDS = (
+    "obs_full",
+    "obs_lidar",
+    "action",
+    "reward",
+    "terminated",
+    "truncated",
+) + _INFO_FIELDS
 
 
 class EpisodeOutcome(Enum):
@@ -58,4 +65,6 @@ def collect_one_episode(
         if terminated or truncated:
             break
 
-    return EpisodeOutcome.KEPT, {key: np.stack(values) for key, values in buffers.items()}
+    return EpisodeOutcome.KEPT, {
+        key: np.stack(values) for key, values in buffers.items()
+    }

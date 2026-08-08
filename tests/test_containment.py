@@ -4,11 +4,12 @@ from dataclasses import dataclass
 
 import numpy as np
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from push_me.geometry import (
-    contains,
     containment_error,
+    contains,
     min_area_rect,
     rect_corners,
     rects_overlap,
@@ -75,7 +76,9 @@ def test_min_area_rect_area_does_not_exceed_axis_aligned_bounding_box(name):
 
 
 def test_transform_to_rect_frame_rect_center_maps_to_origin():
-    rect = _Rect(center=np.array([3.0, -2.0]), angle=0.5, half_extents=np.array([1.0, 1.0]))
+    rect = _Rect(
+        center=np.array([3.0, -2.0]), angle=0.5, half_extents=np.array([1.0, 1.0])
+    )
     local = transform_to_rect_frame(rect.center[None, :], rect)
     assert local == pytest.approx(np.zeros((1, 2)), abs=1e-9)
 
@@ -106,16 +109,22 @@ def test_contains_and_error_agree_on_known_examples():
 
 @given(st.sampled_from(_SHAPE_NAMES), _coords, _coords, _angles, _extents, _extents)
 def test_contains_agrees_with_containment_error_sign(name, cx, cy, angle, hw, hh):
-    rect = _Rect(center=np.array([cx, cy]), angle=angle, half_extents=np.array([hw, hh]))
+    rect = _Rect(
+        center=np.array([cx, cy]), angle=angle, half_extents=np.array([hw, hh])
+    )
     outline = SHAPES[name].outline + rect.center
     err = containment_error(rect, outline)
     assert contains(rect, outline) == (err <= 0)
 
 
-@given(_coords, _coords, _angles, _extents, _extents, st.floats(min_value=0, max_value=10))
+@given(
+    _coords, _coords, _angles, _extents, _extents, st.floats(min_value=0, max_value=10)
+)
 def test_containment_error_is_monotonic_in_margin(cx, cy, angle, hw, hh, extra_margin):
     point = np.array([[cx + 0.1, cy + 0.1]])
-    small = _Rect(center=np.array([cx, cy]), angle=angle, half_extents=np.array([hw, hh]))
+    small = _Rect(
+        center=np.array([cx, cy]), angle=angle, half_extents=np.array([hw, hh])
+    )
     big = _Rect(
         center=np.array([cx, cy]),
         angle=angle,
@@ -128,10 +137,14 @@ def test_containment_error_is_monotonic_in_margin(cx, cy, angle, hw, hh, extra_m
 def test_contains_is_vertex_order_invariant(name, cx, cy, angle):
     rng = np.random.default_rng(0)
     outline = SHAPES[name].outline + np.array([cx, cy])
-    rect = _Rect(center=np.array([cx, cy]), angle=angle, half_extents=np.array([100.0, 100.0]))
+    rect = _Rect(
+        center=np.array([cx, cy]), angle=angle, half_extents=np.array([100.0, 100.0])
+    )
     permuted = outline[rng.permutation(len(outline))]
     assert contains(rect, outline) == contains(rect, permuted)
-    assert containment_error(rect, outline) == pytest.approx(containment_error(rect, permuted))
+    assert containment_error(rect, outline) == pytest.approx(
+        containment_error(rect, permuted)
+    )
 
 
 @given(
@@ -145,9 +158,13 @@ def test_contains_is_vertex_order_invariant(name, cx, cy, angle):
     _coords,
     _angles,
 )
-def test_contains_is_rigid_transform_invariant(name, cx, cy, angle, hw, hh, dx, dy, dtheta):
+def test_contains_is_rigid_transform_invariant(
+    name, cx, cy, angle, hw, hh, dx, dy, dtheta
+):
     outline = SHAPES[name].outline + np.array([cx, cy])
-    rect = _Rect(center=np.array([cx, cy]), angle=angle, half_extents=np.array([hw, hh]))
+    rect = _Rect(
+        center=np.array([cx, cy]), angle=angle, half_extents=np.array([hw, hh])
+    )
 
     shift = np.array([dx, dy])
     moved_rect = _Rect(
@@ -167,7 +184,9 @@ def test_contains_is_rigid_transform_invariant(name, cx, cy, angle, hw, hh, dx, 
 
 
 def test_rect_corners_axis_aligned():
-    rect = _Rect(center=np.array([1.0, 2.0]), angle=0.0, half_extents=np.array([3.0, 4.0]))
+    rect = _Rect(
+        center=np.array([1.0, 2.0]), angle=0.0, half_extents=np.array([3.0, 4.0])
+    )
     corners = rect_corners(rect)
     expected = np.array([[4, 6], [-2, 6], [-2, -2], [4, -2]], dtype=float)
     assert sorted(corners.tolist()) == sorted(expected.tolist())
@@ -175,16 +194,33 @@ def test_rect_corners_axis_aligned():
 
 def test_rects_overlap_known_cases():
     a = _Rect(center=np.zeros(2), angle=0.0, half_extents=np.array([1.0, 1.0]))
-    touching = _Rect(center=np.array([2.0, 0.0]), angle=0.0, half_extents=np.array([1.0, 1.0]))
-    overlapping = _Rect(center=np.array([1.5, 0.0]), angle=0.0, half_extents=np.array([1.0, 1.0]))
-    far = _Rect(center=np.array([10.0, 10.0]), angle=0.0, half_extents=np.array([1.0, 1.0]))
+    touching = _Rect(
+        center=np.array([2.0, 0.0]), angle=0.0, half_extents=np.array([1.0, 1.0])
+    )
+    overlapping = _Rect(
+        center=np.array([1.5, 0.0]), angle=0.0, half_extents=np.array([1.0, 1.0])
+    )
+    far = _Rect(
+        center=np.array([10.0, 10.0]), angle=0.0, half_extents=np.array([1.0, 1.0])
+    )
 
     assert rects_overlap(a, touching) is True
     assert rects_overlap(a, overlapping) is True
     assert rects_overlap(a, far) is False
 
 
-@given(_coords, _coords, _angles, _extents, _extents, _coords, _coords, _angles, _extents, _extents)
+@given(
+    _coords,
+    _coords,
+    _angles,
+    _extents,
+    _extents,
+    _coords,
+    _coords,
+    _angles,
+    _extents,
+    _extents,
+)
 def test_rects_overlap_is_symmetric(cx1, cy1, a1, hw1, hh1, cx2, cy2, a2, hw2, hh2):
     r1 = _Rect(center=np.array([cx1, cy1]), angle=a1, half_extents=np.array([hw1, hh1]))
     r2 = _Rect(center=np.array([cx2, cy2]), angle=a2, half_extents=np.array([hw2, hh2]))
@@ -193,5 +229,7 @@ def test_rects_overlap_is_symmetric(cx1, cy1, a1, hw1, hh1, cx2, cy2, a2, hw2, h
 
 @given(_coords, _coords, _angles, _extents, _extents)
 def test_rects_overlap_self(cx, cy, angle, hw, hh):
-    rect = _Rect(center=np.array([cx, cy]), angle=angle, half_extents=np.array([hw, hh]))
+    rect = _Rect(
+        center=np.array([cx, cy]), angle=angle, half_extents=np.array([hw, hh])
+    )
     assert rects_overlap(rect, rect) is True

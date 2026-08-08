@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 import pygame
-import pytest
 
 from push_me.config import PushTPOConfig
-from push_me.demo_collection import EpisodeOutcome, RECORDED_FIELDS, collect_one_episode
+from push_me.demo_collection import RECORDED_FIELDS, EpisodeOutcome, collect_one_episode
 from push_me.env import PushTPOEnv
 
 
@@ -14,8 +13,12 @@ def _fixed_action_source(action=(0.0, 0.0)):
     return lambda: arr
 
 
-def test_collect_one_episode_kept_records_all_fields_with_matching_length(sdl_dummy_driver):
-    cfg = PushTPOConfig(n_objects=1, shapes=["square"], obs_mode="full", n_rays=16, max_steps=5)
+def test_collect_one_episode_kept_records_all_fields_with_matching_length(
+    sdl_dummy_driver,
+):
+    cfg = PushTPOConfig(
+        n_objects=1, shapes=["square"], obs_mode="full", n_rays=16, max_steps=5
+    )
     env = PushTPOEnv(cfg, render_mode="human")
 
     outcome, steps = collect_one_episode(env, seed=0, get_action=_fixed_action_source())
@@ -28,11 +31,17 @@ def test_collect_one_episode_kept_records_all_fields_with_matching_length(sdl_du
     env.close()
 
 
-def test_collect_one_episode_records_both_observation_modes_at_correct_dims(sdl_dummy_driver):
-    cfg = PushTPOConfig(n_objects=2, shapes=["square"], obs_mode="full", n_rays=16, max_steps=3)
+def test_collect_one_episode_records_both_observation_modes_at_correct_dims(
+    sdl_dummy_driver,
+):
+    cfg = PushTPOConfig(
+        n_objects=2, shapes=["square"], obs_mode="full", n_rays=16, max_steps=3
+    )
     env = PushTPOEnv(cfg, render_mode="human")
 
-    _outcome, steps = collect_one_episode(env, seed=1, get_action=_fixed_action_source())
+    _outcome, steps = collect_one_episode(
+        env, seed=1, get_action=_fixed_action_source()
+    )
     assert steps is not None
 
     expected_full_dim = 4 + cfg.n_objects * (7 + 9) + cfg.n_objects * 6
@@ -80,11 +89,15 @@ def test_collect_one_episode_quit_mid_episode_returns_quit_outcome(sdl_dummy_dri
     assert steps is None
 
 
-def test_collect_one_episode_achieved_mode_and_assignment_are_recorded_per_step(sdl_dummy_driver):
+def test_collect_one_episode_achieved_mode_and_assignment_are_recorded_per_step(
+    sdl_dummy_driver,
+):
     cfg = PushTPOConfig(n_objects=1, shapes=["square"], obs_mode="full", max_steps=4)
     env = PushTPOEnv(cfg, render_mode="human")
 
-    _outcome, steps = collect_one_episode(env, seed=4, get_action=_fixed_action_source())
+    _outcome, steps = collect_one_episode(
+        env, seed=4, get_action=_fixed_action_source()
+    )
     assert steps is not None
     assert steps["achieved_mode"].shape == (4, 1)
     assert steps["assignment"].shape == (4, 1)

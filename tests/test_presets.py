@@ -3,28 +3,51 @@ from __future__ import annotations
 from typing import cast
 
 import gymnasium as gym
-import numpy as np
 import pytest
 
 import push_me  # noqa: F401  (side effect: registers the presets with gymnasium)
 from push_me.env import PushTPOEnv
 
 _EXPECTED = {
-    "PushTPO-Full-Single-v0": dict(obs_mode="full", n_objects=1, shapes=["t_tetromino"], goal_margin=8.0),
-    "PushTPO-Lidar-Single-v0": dict(obs_mode="lidar", n_objects=1, shapes=["t_tetromino"], goal_margin=8.0),
-    "PushTPO-Full-Multimodal-v0": dict(obs_mode="full", n_objects=1, shapes=["hexagon"], goal_margin=24.0),
-    "PushTPO-Lidar-Multimodal-v0": dict(obs_mode="lidar", n_objects=1, shapes=["hexagon"], goal_margin=24.0),
-    "PushTPO-Lidar-Multi3-v0": dict(
-        obs_mode="lidar", n_objects=3, shapes=["square"], goal_margin=24.0, assignment_mode="free"
-    ),
-    "PushTPO-Lidar-Trap-v0": dict(
-        obs_mode="lidar",
-        n_objects=3,
-        shapes=["square"],
-        goal_margin=24.0,
-        assignment_mode="free",
-        traps=True,
-    ),
+    "PushTPO-Full-Single-v0": {
+        "obs_mode": "full",
+        "n_objects": 1,
+        "shapes": ["t_tetromino"],
+        "goal_margin": 8.0,
+    },
+    "PushTPO-Lidar-Single-v0": {
+        "obs_mode": "lidar",
+        "n_objects": 1,
+        "shapes": ["t_tetromino"],
+        "goal_margin": 8.0,
+    },
+    "PushTPO-Full-Multimodal-v0": {
+        "obs_mode": "full",
+        "n_objects": 1,
+        "shapes": ["hexagon"],
+        "goal_margin": 24.0,
+    },
+    "PushTPO-Lidar-Multimodal-v0": {
+        "obs_mode": "lidar",
+        "n_objects": 1,
+        "shapes": ["hexagon"],
+        "goal_margin": 24.0,
+    },
+    "PushTPO-Lidar-Multi3-v0": {
+        "obs_mode": "lidar",
+        "n_objects": 3,
+        "shapes": ["square"],
+        "goal_margin": 24.0,
+        "assignment_mode": "free",
+    },
+    "PushTPO-Lidar-Trap-v0": {
+        "obs_mode": "lidar",
+        "n_objects": 3,
+        "shapes": ["square"],
+        "goal_margin": 24.0,
+        "assignment_mode": "free",
+        "traps": True,
+    },
 }
 
 
@@ -51,10 +74,10 @@ def test_trap_preset_actually_enables_traps():
 @pytest.mark.parametrize("preset_id", sorted(_EXPECTED))
 def test_preset_env_runs_a_few_steps(preset_id):
     env = gym.make(preset_id)
-    obs, info = env.reset(seed=0)
+    obs, _ = env.reset(seed=0)
     assert obs in env.observation_space
     for _ in range(3):
-        obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
+        obs, *_ = env.step(env.action_space.sample())
     env.close()
 
 

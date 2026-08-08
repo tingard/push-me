@@ -12,7 +12,7 @@ EXPECTED_DEFAULTS = {
     "goal_margin": 8.0,
     "obs_mode": "lidar",
     "n_rays": 128,
-    "lidar_range": 150.0,
+    "lidar_range": 300.0,
     "occluder_walls": 0,
     "arena_size": 512.0,
     "shape_area": 4000.0,
@@ -56,7 +56,9 @@ def test_shapes_default_is_independent_per_instance():
 
 
 def test_keyword_overrides_apply():
-    config = PushTPOConfig(n_objects=3, shapes=["square", "square", "square"], goal_margin=24.0)
+    config = PushTPOConfig(
+        n_objects=3, shapes=["square", "square", "square"], goal_margin=24.0
+    )
     assert config.n_objects == 3
     assert config.shapes == ["square", "square", "square"]
     assert config.goal_margin == 24.0

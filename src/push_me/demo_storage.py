@@ -41,7 +41,9 @@ class ReplayBufferWriter:
     def append_episode(self, seed: int, steps: dict[str, np.ndarray]) -> None:
         lengths = {len(arr) for arr in steps.values()}
         if len(lengths) > 1:
-            raise ValueError(f"all recorded fields must have the same episode length, got {lengths}")
+            raise ValueError(
+                f"all recorded fields must have the same episode length, got {lengths}"
+            )
         n_new = lengths.pop() if lengths else 0
         if n_new == 0:
             return
@@ -50,7 +52,10 @@ class ReplayBufferWriter:
             arr = np.asarray(arr)
             if key not in self._data:
                 self._data.create_array(
-                    key, shape=(0,) + arr.shape[1:], chunks=(1024,) + arr.shape[1:], dtype=arr.dtype
+                    key,
+                    shape=(0,) + arr.shape[1:],
+                    chunks=(1024,) + arr.shape[1:],
+                    dtype=arr.dtype,
                 )
             array = self._data.get_array(key)
             old_len = array.shape[0]
@@ -78,7 +83,9 @@ def read_episode(path: str | Path, index: int) -> dict[str, np.ndarray]:
     ends = np.asarray(root.require_group("meta").get_array("episode_ends")[:])
     start = int(ends[index - 1]) if index > 0 else 0
     end = int(ends[index])
-    return {key: np.asarray(data.get_array(key)[start:end]) for key in data.array_keys()}
+    return {
+        key: np.asarray(data.get_array(key)[start:end]) for key in data.array_keys()
+    }
 
 
 def summarize_achieved_modes(path: str | Path) -> dict[int, int]:

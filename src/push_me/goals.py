@@ -17,7 +17,9 @@ class GoalRect:
     accepts: set[str]
 
 
-def make_goal_rect(shape: ShapeDef, margin: float, pose: tuple[float, float, float]) -> GoalRect:
+def make_goal_rect(
+    shape: ShapeDef, margin: float, pose: tuple[float, float, float]
+) -> GoalRect:
     half_extents, phi = min_area_rect(shape.outline)
     gx, gy, gtheta = pose
     return GoalRect(
@@ -64,7 +66,9 @@ def sample_goal_rects(
     return placed
 
 
-def resolve_assignment(cost: np.ndarray, mode: str = "free") -> tuple[np.ndarray, np.ndarray]:
+def resolve_assignment(
+    cost: np.ndarray, mode: str = "free"
+) -> tuple[np.ndarray, np.ndarray]:
     k = cost.shape[0]
     if mode == "fixed":
         assignment = np.arange(k)

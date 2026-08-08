@@ -13,7 +13,7 @@ class PushTPOConfig:
 
     obs_mode: str = "lidar"
     n_rays: int = 128
-    lidar_range: float = 150.0
+    lidar_range: float = 300.0
     occluder_walls: int = 0
 
     arena_size: float = 512.0

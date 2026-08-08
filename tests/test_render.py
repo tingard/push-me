@@ -41,7 +41,11 @@ print("OK")
 
 def test_render_mode_none_never_imports_pygame():
     result = subprocess.run(
-        [sys.executable, "-c", _REPO_ROOT_PYTHON_CHECK], capture_output=True, text=True, timeout=30
+        [sys.executable, "-c", _REPO_ROOT_PYTHON_CHECK],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "OK" in result.stdout
@@ -81,7 +85,11 @@ def test_belief_overlay_changes_the_rendered_frame():
     def belief_fn():
         body = env._object_bodies[0]
         pose = np.array([body.position.x + 40, body.position.y + 40, body.angle])
-        return [BeliefMarker(pose=pose, shape_name=env._object_shapes[0].name, confidence=1.0)]
+        return [
+            BeliefMarker(
+                pose=pose, shape_name=env._object_shapes[0].name, confidence=1.0
+            )
+        ]
 
     env.set_belief_overlay(belief_fn)
     _renderer(env).show_belief = True
@@ -105,7 +113,14 @@ def test_toggling_ground_truth_on_changes_the_frame():
 
 def test_traps_and_occluders_render_without_crashing():
     cfg = PushTPOConfig(
-        n_objects=2, shapes=["square"], obs_mode="lidar", n_rays=16, seed=0, traps=True, n_traps=1, occluder_walls=2
+        n_objects=2,
+        shapes=["square"],
+        obs_mode="lidar",
+        n_rays=16,
+        seed=0,
+        traps=True,
+        n_traps=1,
+        occluder_walls=2,
     )
     env = PushTPOEnv(cfg, render_mode="rgb_array")
     env.reset(seed=0)
@@ -151,7 +166,9 @@ def test_snapshot_baseline_reset(assert_matches_snapshot, sdl_dummy_driver):
 
 
 def test_snapshot_lidar_rays_with_occlusion(assert_matches_snapshot, sdl_dummy_driver):
-    cfg = PushTPOConfig(n_objects=1, shapes=["square"], obs_mode="lidar", n_rays=32, seed=1)
+    cfg = PushTPOConfig(
+        n_objects=1, shapes=["square"], obs_mode="lidar", n_rays=32, seed=1
+    )
     env = PushTPOEnv(cfg, render_mode="rgb_array")
     env.reset(seed=1)
     assert env._pusher_body is not None
@@ -191,7 +208,9 @@ def test_snapshot_satisfied_goal_turns_green(assert_matches_snapshot, sdl_dummy_
 
 
 def test_snapshot_multi_object_scene(assert_matches_snapshot, sdl_dummy_driver):
-    cfg = PushTPOConfig(n_objects=3, shapes=["square"], obs_mode="lidar", n_rays=32, seed=3)
+    cfg = PushTPOConfig(
+        n_objects=3, shapes=["square"], obs_mode="lidar", n_rays=32, seed=3
+    )
     env = PushTPOEnv(cfg, render_mode="rgb_array")
     env.reset(seed=3)
     _enable_ground_truth_and_belief(env)
@@ -202,7 +221,9 @@ def test_snapshot_multi_object_scene(assert_matches_snapshot, sdl_dummy_driver):
     env.close()
 
 
-def test_snapshot_belief_overlay_ground_truth_plus_noise(assert_matches_snapshot, sdl_dummy_driver):
+def test_snapshot_belief_overlay_ground_truth_plus_noise(
+    assert_matches_snapshot, sdl_dummy_driver
+):
     cfg = PushTPOConfig(n_objects=2, shapes=["square"], obs_mode="full", seed=4)
     env = PushTPOEnv(cfg, render_mode="rgb_array")
     env.reset(seed=4)
@@ -213,9 +234,16 @@ def test_snapshot_belief_overlay_ground_truth_plus_noise(assert_matches_snapshot
         for i, body in enumerate(env._object_bodies):
             dx, dy = rng.normal(0, 5, size=2)
             dtheta = rng.normal(0, 0.1)
-            pose = np.array([body.position.x + dx, body.position.y + dy, body.angle + dtheta])
+            pose = np.array(
+                [body.position.x + dx, body.position.y + dy, body.angle + dtheta]
+            )
             markers.append(
-                BeliefMarker(pose=pose, shape_name=env._object_shapes[i].name, confidence=0.7, label=f"b{i}")
+                BeliefMarker(
+                    pose=pose,
+                    shape_name=env._object_shapes[i].name,
+                    confidence=0.7,
+                    label=f"b{i}",
+                )
             )
         return markers
 
