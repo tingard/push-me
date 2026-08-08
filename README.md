@@ -2,20 +2,17 @@
 
 A partially-observable, multi-object, multi-modal-goal variant of [PushT](https://diffusion-policy.cs.columbia.edu/), built as a `gymnasium.Env` on `pymunk` physics.
 
-## Why this exists
+## What this adds over PushT
 
-PushT-PO exists to test two specific claims, not to be a general-purpose benchmark:
+The original [PushT](https://diffusion-policy.cs.columbia.edu/) task is: push one T-shaped block into one fixed target pose, fully observed. PushT-PO keeps the same physics and pushing mechanic but extends it along three axes that vanilla PushT doesn't have:
 
-**Claim A — goal sets beat goal images.** A goal specified as a *region* admits many valid end states. A policy conditioned on a single goal image must arbitrarily commit to one of them, and pays for it. Most pushing benchmarks bake in a single canonical target pose, which makes this claim untestable — there's nothing to be ambiguous about. Here, the number and size of valid end states are both tunable config parameters, so the goal-image baseline's disadvantage can be plotted as a curve instead of asserted at a single point.
+- **Goals are regions, not poses.** Success is "does the object's outline lie inside this rectangle," not "does it match this exact pose." The rectangle's size (`goal_margin`) and the object's rotational symmetry both mean many distinct end poses can satisfy the same goal — vanilla PushT has exactly one correct pose.
+- **Multiple objects with free assignment.** `n_objects` can be > 1, and with `assignment_mode="free"` any object may land in any compatible goal rectangle — the environment resolves the best object-to-goal matching itself (Hungarian algorithm on containment error), rather than pinning object *i* to goal *i*.
+- **Partial observability is a tunable dial, not on/off.** `obs_mode="lidar"` replaces full state with a ray-cast sensor of configurable range and count, so objects can go unseen for a controllable, measurable number of steps (`steps_since_observed` is logged directly). Optional interior `occluder_walls` push this further. Vanilla PushT is always fully observed.
+- **Reward respects the multi-modality.** The dense reward is a minimum over valid goal assignments/orientations, never a distance to one canonical pose — so it doesn't secretly reward one arbitrary "correct" solution over the others.
+- **Optional irreversibility.** `traps=True` adds concave wedges that can permanently trap a pushed object, for testing whether a policy walks into absorbing states it can't recover from.
 
-**Claim B — a recurrent belief state matches frame-stacking, and keeps working past its horizon.** Under partial observation, information about unseen objects must be retained across time. Frame stacking has a fixed window; a recurrent belief doesn't. Rather than a single "occluded: yes/no" flag, the required memory horizon (lidar range vs. arena size, object count, optional occluder walls) is a first-class, continuously tunable knob, so performance can be plotted against it.
-
-Two things follow that are easy to get wrong and are treated as invariants throughout the codebase:
-
-- The dense reward is a **minimum over valid goal modes**, never a distance to one canonical pose — a reward that secretly prefers one mode would quietly destroy Claim A.
-- Partial observability is **parametric** (a range knob, occluder count), not a binary flag — a single data point can't be swept into a curve.
-
-See [`SPEC.md`](SPEC.md) for the full design rationale and implementation spec.
+See [`SPEC.md`](SPEC.md) for the full design spec, including the reasoning behind each of these choices.
 
 ## How multi-modality is generated
 
@@ -46,16 +43,14 @@ obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
 
 ### Presets
 
-| Preset | Config | Tests |
-|---|---|---|
-| `PushTPO-Full-Single-v0` | full obs, 1 T, margin 8 | sanity baseline |
-| `PushTPO-Lidar-Single-v0` | lidar, 1 T, margin 8 | Claim B only |
-| `PushTPO-Full-Multimodal-v0` | full obs, 1 hexagon, margin 24 | Claim A only |
-| `PushTPO-Lidar-Multimodal-v0` | lidar, 1 hexagon, margin 24 | both |
-| `PushTPO-Lidar-Multi3-v0` | lidar, 3 squares, free assignment, margin 24 | the dishwasher |
-| `PushTPO-Lidar-Trap-v0` | as Multi3, plus traps | irreversibility |
-
-The first four form a 2×2 factorial design (obs mode × margin) — run all four together, or claims about which one wins can't be attributed to a cause.
+| Preset | Config |
+|---|---|
+| `PushTPO-Full-Single-v0` | full obs, 1 T, margin 8 — closest to vanilla PushT |
+| `PushTPO-Lidar-Single-v0` | lidar obs, 1 T, margin 8 — adds partial observability only |
+| `PushTPO-Full-Multimodal-v0` | full obs, 1 hexagon, margin 24 — adds goal multi-modality only |
+| `PushTPO-Lidar-Multimodal-v0` | lidar obs, 1 hexagon, margin 24 — both together |
+| `PushTPO-Lidar-Multi3-v0` | lidar obs, 3 squares, free assignment, margin 24 — the dishwasher |
+| `PushTPO-Lidar-Trap-v0` | as Multi3, plus traps — irreversibility |
 
 ### Manual play
 
