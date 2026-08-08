@@ -2,6 +2,10 @@
 
 A partially-observable, multi-object, multi-modal-goal variant of [PushT](https://github.com/huggingface/gym-pusht), built as a `gymnasium.Env` on `pymunk` physics.
 
+The below is a screenshot from (part of) the `scripts/play.py` script.
+
+![Example human UX](static/push-me.png)
+
 ## What this adds over PushT
 
 The original PushT task is: push one T-shaped block into one fixed target pose, fully observed. PushT-PO keeps the same physics and pushing mechanic but extends it along three axes that vanilla PushT doesn't have:
