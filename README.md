@@ -4,7 +4,7 @@ A partially-observable, multi-object, multi-modal-goal variant of [PushT](https:
 
 ## What this adds over PushT
 
-The original [PushT](https://diffusion-policy.cs.columbia.edu/) task is: push one T-shaped block into one fixed target pose, fully observed. PushT-PO keeps the same physics and pushing mechanic but extends it along three axes that vanilla PushT doesn't have:
+The original [PushT](https://github.com/huggingface/gym-pusht) task is: push one T-shaped block into one fixed target pose, fully observed. PushT-PO keeps the same physics and pushing mechanic but extends it along three axes that vanilla PushT doesn't have:
 
 - **Goals are regions, not poses.** Success is "does the object's outline lie inside this rectangle," not "does it match this exact pose." The rectangle's size (`goal_margin`) and the object's rotational symmetry both mean many distinct end poses can satisfy the same goal — vanilla PushT has exactly one correct pose.
 - **Multiple objects with free assignment.** `n_objects` can be > 1, and with `assignment_mode="free"` any object may land in any compatible goal rectangle — the environment resolves the best object-to-goal matching itself (Hungarian algorithm on containment error), rather than pinning object *i* to goal *i*.
