@@ -12,8 +12,6 @@ The original PushT task is: push one T-shaped block into one fixed target pose, 
 - **Reward respects the multi-modality.** The dense reward is a minimum over valid goal assignments/orientations, never a distance to one canonical pose — so it doesn't secretly reward one arbitrary "correct" solution over the others.
 - **Optional irreversibility.** `traps=True` adds concave wedges that can permanently trap a pushed object, for testing whether a policy walks into absorbing states it can't recover from.
 
-See [`SPEC.md`](SPEC.md) for the full design spec, including the reasoning behind each of these choices.
-
 ## How multi-modality is generated
 
 A goal is a rotated rectangle sized to an object's minimum-area bounding rectangle, inflated by a margin. An object satisfies its goal when its entire outline lies inside that rectangle. Three orthogonal dials fall out of this:

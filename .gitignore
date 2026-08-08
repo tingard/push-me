@@ -1,3 +1,7 @@
+SPEC.md
+CLAUDE.md
+.agent_notes
+
 # Python-generated files
 __pycache__/
 *.py[oc]
